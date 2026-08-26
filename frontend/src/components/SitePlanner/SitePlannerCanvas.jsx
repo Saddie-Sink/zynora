@@ -451,25 +451,25 @@ function SitePlannerCanvas({ project, design, onConfirm }) {
   }
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[1fr_370px]">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+    <section className="sp-planner-grid">
+      <div className="sp-plot-panel">
+        <div className="sp-panel-heading">
           <div>
-            <h2 className="text-2xl font-semibold">
+            <h2 className="sp-panel-title">
               Interactive Plot View
             </h2>
 
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="sp-panel-copy">
               Set the building size and drag it anywhere
               inside the plot.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="sp-small-actions">
             <button
               type="button"
               onClick={centerBuilding}
-              className="rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold transition hover:bg-white/10"
+              className="sp-small-button"
             >
               Center
             </button>
@@ -477,20 +477,20 @@ function SitePlannerCanvas({ project, design, onConfirm }) {
             <button
               type="button"
               onClick={resetPlacement}
-              className="rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold transition hover:bg-white/10"
+              className="sp-small-button"
             >
               Reset
             </button>
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl bg-slate-100 p-4">
+        <div className="sp-plot-wrap">
           <svg
             ref={svgRef}
             viewBox={`-5 -5 ${plotLength + 10} ${
               plotWidth + 15
             }`}
-            className="w-full touch-none select-none"
+            className="sp-site-svg"
             role="img"
             aria-label="Interactive site planner"
           >
@@ -604,26 +604,26 @@ function SitePlannerCanvas({ project, design, onConfirm }) {
         </div>
       </div>
 
-      <aside className="rounded-3xl border border-white/10 bg-white/5 p-6">
-        <p className="text-sm font-semibold uppercase tracking-widest text-emerald-400">
+      <aside className="sp-controls-panel">
+        <p className="sp-eyebrow">
           Site Controls
         </p>
 
-        <h2 className="mt-2 text-2xl font-semibold">
+        <h2 className="sp-controls-title">
           Building Placement
         </h2>
 
-        <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-          <h3 className="font-semibold text-white">
+        <div className="sp-control-card">
+          <h3 className="sp-control-card-title">
             Building dimensions
           </h3>
 
-          <p className="mt-1 text-xs leading-5 text-slate-400">
+          <p className="sp-control-card-copy">
             These dimensions stay fixed while the
             building is moved.
           </p>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="sp-input-grid">
             <NumberInput
               label="Length"
               name="length"
@@ -644,23 +644,23 @@ function SitePlannerCanvas({ project, design, onConfirm }) {
           <button
             type="button"
             onClick={applyBuildingSize}
-            className="mt-4 w-full rounded-xl bg-blue-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-400"
+            className="sp-apply-button"
           >
             Apply Building Size
           </button>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-          <h3 className="font-semibold text-white">
+        <div className="sp-control-card">
+          <h3 className="sp-control-card-title">
             Exact setbacks
           </h3>
 
-          <p className="mt-1 text-xs leading-5 text-slate-400">
+          <p className="sp-control-card-copy">
             Edit any side. The building will move,
             while its size remains unchanged.
           </p>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="sp-input-grid">
             {["front", "rear", "left", "right"].map(
               (name) => (
                 <SetbackInput
@@ -684,7 +684,7 @@ function SitePlannerCanvas({ project, design, onConfirm }) {
             )}
           </div>
 
-          <p className="mt-3 text-xs leading-5 text-slate-500">
+          <p className="sp-help-text">
             Press Enter or click outside the field to
             apply a value.
           </p>
@@ -693,13 +693,13 @@ function SitePlannerCanvas({ project, design, onConfirm }) {
         {inputError && (
           <p
             role="alert"
-            className="mt-4 rounded-xl border border-red-400/20 bg-red-400/10 px-3 py-2 text-sm text-red-300"
+            className="sp-error-message"
           >
             {inputError}
           </p>
         )}
 
-        <div className="mt-6 space-y-4">
+        <div className="sp-info-list">
           <InfoRow
             label="Plot size"
             value={`${plotLength.toFixed(
@@ -741,12 +741,12 @@ function SitePlannerCanvas({ project, design, onConfirm }) {
         <button
           type="button"
           onClick={confirmPlacement}
-          className="mt-8 w-full rounded-xl bg-emerald-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-emerald-400"
+          className="sp-confirm-button"
         >
           Confirm and Generate 2D Plan
         </button>
 
-        <p className="mt-4 text-xs leading-5 text-slate-500">
+        <p className="sp-disclaimer">
           This output is conceptual. Construction
           dimensions and approval requirements must be
           checked by a qualified professional.
@@ -871,12 +871,12 @@ function NumberInput({
   onChange,
 }) {
   return (
-    <label className="block">
-      <span className="text-xs font-medium text-slate-400">
+    <label className="sp-field">
+      <span className="sp-field-label">
         {label}
       </span>
 
-      <div className="mt-1 flex items-center rounded-xl border border-white/10 bg-slate-950 focus-within:border-blue-400">
+      <div className="sp-input-shell">
         <input
           type="number"
           name={name}
@@ -884,10 +884,10 @@ function NumberInput({
           onChange={onChange}
           min="0.1"
           step="0.25"
-          className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-white outline-none"
+          className="sp-number-input"
         />
 
-        <span className="pr-3 text-xs text-slate-500">
+        <span className="sp-unit">
           {unit}
         </span>
       </div>
@@ -906,12 +906,12 @@ function SetbackInput({
   onKeyDown,
 }) {
   return (
-    <label className="block">
-      <span className="text-xs font-medium text-slate-400">
+    <label className="sp-field">
+      <span className="sp-field-label">
         {label}
       </span>
 
-      <div className="mt-1 flex items-center rounded-xl border border-white/10 bg-slate-950 focus-within:border-emerald-400">
+      <div className="sp-input-shell">
         <input
           type="number"
           name={name}
@@ -922,10 +922,10 @@ function SetbackInput({
           onKeyDown={onKeyDown}
           min="0"
           step="0.25"
-          className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-white outline-none"
+          className="sp-number-input"
         />
 
-        <span className="pr-3 text-xs text-slate-500">
+        <span className="sp-unit">
           {unit}
         </span>
       </div>
@@ -935,12 +935,12 @@ function SetbackInput({
 
 function InfoRow({ label, value }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
-      <span className="text-sm text-slate-400">
+    <div className="sp-info-row">
+      <span className="sp-info-label">
         {label}
       </span>
 
-      <strong className="text-right text-sm text-white">
+      <strong className="sp-info-value">
         {value}
       </strong>
     </div>

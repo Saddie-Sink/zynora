@@ -1,0 +1,29 @@
+{
+  "model": "ExtraTreesRegressor",
+  "version": "layout-ranker-v1",
+  "training_scenarios": 400,
+  "training_candidates": 1200,
+  "feature_names": [
+    "space_utilization",
+    "average_bedroom_area",
+    "average_bathroom_area",
+    "living_area_ratio",
+    "bedroom_area_ratio",
+    "bathroom_area_ratio",
+    "kitchen_area_ratio",
+    "circulation_area_ratio",
+    "door_density",
+    "window_density",
+    "accessibility_score",
+    "privacy_score",
+    "open_living_score",
+    "family_space_score",
+    "natural_light_score",
+    "circulation_score"
+  ],
+  "mae": 0.02990523895006617,
+  "r2": 0.6216653343837526,
+  "random_seed": 42,
+  "label_source": "ZYNORA personalized baseline synthetic labels",
+  "notes": "Initial ML ranker for demo. Future versions should incorporate real user preference selections."
+}

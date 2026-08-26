@@ -1,11 +1,18 @@
 import {
   useEffect,
+  useMemo,
   useState,
 } from "react";
-import { useNavigate } from "react-router-dom";
+
+import {
+  useNavigate,
+} from "react-router-dom";
 
 import FloorPlanCanvas from "../components/FloorPlan/FloorPlanCanvas";
 import generateFloorPlan from "../utils/generateFloorPlan";
+
+import "../assets/styles/floorplan.css";
+
 
 function FloorPlan() {
   const navigate = useNavigate();
@@ -16,14 +23,33 @@ function FloorPlan() {
   const [layout, setLayout] =
     useState(null);
 
-  const [floorPlan, setFloorPlan] =
-    useState(null);
+  const [candidates, setCandidates] =
+    useState([]);
+
+  const [
+    selectedCandidateId,
+    setSelectedCandidateId,
+  ] = useState(null);
 
   const [loading, setLoading] =
     useState(true);
 
   const [error, setError] =
     useState("");
+
+  const [
+    backendSummary,
+    setBackendSummary,
+  ] = useState({
+    candidateCount: 0,
+    rejectedCount: 0,
+    recommendedId: null,
+  });
+
+
+  // ==========================================================
+  // LOAD PROJECT + SITE LAYOUT
+  // ==========================================================
 
   useEffect(() => {
     try {
@@ -70,63 +96,28 @@ function FloorPlan() {
     }
   }, []);
 
+
+  // ==========================================================
+  // GENERATE THREE CANDIDATES
+  // ==========================================================
+
   useEffect(() => {
-    if (!project || !layout?.building) {
+    if (
+      !project ||
+      !layout?.building
+    ) {
       return;
     }
 
     let cancelled = false;
 
-    async function createFloorPlan() {
+    async function createCandidates() {
       try {
         setLoading(true);
         setError("");
 
         const normalizedProject =
           normalizeProject(project);
-
-        console.log(
-          "========== FLOOR PLAN INPUT =========="
-        );
-
-        console.log(
-          "Original project:",
-          project
-        );
-
-        console.log(
-          "Project sent to backend:",
-          normalizedProject
-        );
-
-        console.log(
-          "Project floors:",
-          normalizedProject.floors
-        );
-
-        console.log(
-          "Project bedrooms:",
-          normalizedProject.bedrooms
-        );
-
-        console.log(
-          "Project bathrooms:",
-          normalizedProject.bathrooms
-        );
-
-        console.log(
-          "Layout sent to backend:",
-          layout
-        );
-
-        console.log(
-          "Building:",
-          layout?.building
-        );
-
-        console.log(
-          "======================================"
-        );
 
         const response =
           await generateFloorPlan(
@@ -135,59 +126,104 @@ function FloorPlan() {
           );
 
         console.log(
-          "Floor-plan response:",
+          "ZYNORA floor-plan response:",
           response
         );
 
-        const generatedPlan =
-          extractFloorPlan(response);
+        const rawCandidates =
+          extractCandidates(response);
 
-        if (!generatedPlan) {
+        if (
+          !Array.isArray(rawCandidates) ||
+          rawCandidates.length === 0
+        ) {
           throw new Error(
-            "The backend returned an empty floor plan."
+            "The backend did not return any floor-plan candidates."
           );
         }
 
+        const normalizedCandidates =
+          rawCandidates
+            .map((candidate, index) =>
+              normalizeCandidate(
+                candidate,
+                layout,
+                index
+              )
+            )
+            .filter(
+              (candidate) =>
+                candidate?.plan &&
+                Array.isArray(
+                  candidate.plan.rooms
+                )
+            )
+            .sort(
+              (a, b) =>
+                getCandidateRank(a) -
+                getCandidateRank(b)
+            );
+
         if (
-          !Array.isArray(
-            generatedPlan.rooms
-          )
+          normalizedCandidates.length === 0
         ) {
           throw new Error(
-            "The backend response does not contain a valid rooms array."
-          );
-        }
-
-        const normalizedPlan =
-          normalizeFloorPlan(
-            generatedPlan,
-            layout
-          );
-
-        if (
-          normalizedPlan.width <= 0 ||
-          normalizedPlan.height <= 0
-        ) {
-          throw new Error(
-            "The generated plan has invalid dimensions."
+            "The returned candidates did not contain valid floor-plan geometry."
           );
         }
 
         if (!cancelled) {
-        setFloorPlan(normalizedPlan);
+          setCandidates(
+            normalizedCandidates
+          );
+
+          setBackendSummary({
+            candidateCount:
+              Number(
+                response?.candidate_count
+              ) ||
+              normalizedCandidates.length,
+
+            rejectedCount:
+              Array.isArray(
+                response?.rejected_candidates
+              )
+                ? response
+                    .rejected_candidates
+                    .length
+                : 0,
+
+            recommendedId:
+              response
+                ?.recommended_candidate_id ||
+              null,
+          });
+
+          const recommended =
+            normalizedCandidates.find(
+              (candidate) =>
+                candidate.recommended
+            );
+
+          setSelectedCandidateId(
+            recommended?.id ||
+              response
+                ?.recommended_candidate_id ||
+              normalizedCandidates[0]?.id
+          );
         }
-        } catch (generationError) {
+      } catch (generationError) {
         console.error(
-          "Unable to generate floor plan:",
+          "Unable to generate candidates:",
           generationError
         );
 
         if (!cancelled) {
-          setFloorPlan(null);
+          setCandidates([]);
 
           setError(
             generationError?.message ||
-              "Floor plan generation failed."
+              "Floor-plan generation failed."
           );
         }
       } finally {
@@ -197,289 +233,959 @@ function FloorPlan() {
       }
     }
 
-    createFloorPlan();
+    createCandidates();
 
     return () => {
       cancelled = true;
     };
   }, [project, layout]);
 
+
+  const selectedCandidate =
+    useMemo(
+      () =>
+        candidates.find(
+          (candidate) =>
+            candidate.id ===
+            selectedCandidateId
+        ) ||
+        candidates[0] ||
+        null,
+      [
+        candidates,
+        selectedCandidateId,
+      ]
+    );
+
+
+  // ==========================================================
+  // PAGE STATES
+  // ==========================================================
+
   if (loading) {
     return <LoadingScreen />;
   }
 
-  if (!project || !layout?.building) {
+  if (
+    !project ||
+    !layout?.building
+  ) {
     return (
-      <main className="min-h-screen bg-slate-950 px-6 py-20 text-white">
-        <div className="mx-auto max-w-xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest text-amber-400">
-            Missing data
+      <main className="fp-page">
+        <section className="fp-state-card">
+          <p className="fp-eyebrow">
+            ZYNORA FLOOR PLANNER
           </p>
 
-          <h1 className="mt-3 text-3xl font-bold">
-            Floor-plan data is missing
+          <h1>
+            Site planning data is missing
           </h1>
 
-          <p className="mt-4 text-slate-400">
-            Confirm the site layout before
-            generating the floor plan.
+          <p>
+            Confirm your site layout before
+            generating floor-plan options.
           </p>
 
           <button
             type="button"
+            className="fp-primary-button"
             onClick={() =>
               navigate("/site-planner")
             }
-            className="mt-8 rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-slate-950 transition hover:bg-emerald-400"
           >
             Open Site Planner
           </button>
-        </div>
+        </section>
       </main>
     );
   }
 
-  if (error || !floorPlan) {
+  if (
+    error ||
+    candidates.length === 0
+  ) {
     return (
-      <main className="min-h-screen bg-slate-950 px-6 py-20 text-white">
-        <div className="mx-auto max-w-xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest text-red-400">
-            Generation error
+      <main className="fp-page">
+        <section className="fp-state-card fp-error-card">
+          <p className="fp-eyebrow">
+            GENERATION ERROR
           </p>
 
-          <h1 className="mt-3 text-3xl font-bold">
-            Floor plan generation failed
+          <h1>
+            Floor-plan generation failed
           </h1>
 
-          <div className="mt-5 rounded-2xl border border-red-400/20 bg-red-400/10 p-4 text-sm text-red-200">
+          <p>
             {error ||
-              "The backend did not return a valid floor plan."}
-          </div>
+              "No valid candidates were returned."}
+          </p>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <div className="fp-state-actions">
             <button
               type="button"
+              className="fp-primary-button"
               onClick={() =>
                 window.location.reload()
               }
-              className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-slate-950 transition hover:bg-emerald-400"
             >
               Try Again
             </button>
 
             <button
               type="button"
+              className="fp-secondary-button"
               onClick={() =>
                 navigate("/site-planner")
               }
-              className="rounded-xl border border-white/15 px-6 py-3 font-semibold transition hover:bg-white/5"
             >
               Back to Site Planner
             </button>
           </div>
-        </div>
+        </section>
       </main>
     );
   }
 
-  const unit =
-    layout?.plot?.unit || "ft";
 
-  const planWidth =
-    safeNumber(floorPlan.width);
+  // ==========================================================
+  // ACTIONS
+  // ==========================================================
 
-  const planHeight =
-    safeNumber(floorPlan.height);
+  function handleSelect(
+    candidateId
+  ) {
+    setSelectedCandidateId(
+      candidateId
+    );
+  }
 
-  const rooms =
-    safeArray(floorPlan.rooms);
 
-  const doors =
-    safeArray(floorPlan.doors);
+  function handleContinue() {
+    if (!selectedCandidate?.plan) {
+      return;
+    }
 
-  const windows =
-    safeArray(floorPlan.windows);
-
-  const furniture =
-    safeArray(floorPlan.furniture);
-
-  const requestedFloors =
-    positiveInteger(
-      project?.floors,
-      1
+    localStorage.setItem(
+      "zynoraSelectedFloorPlan",
+      JSON.stringify(
+        selectedCandidate
+      )
     );
 
-  function handleSaveFloorPlan() {
-  localStorage.setItem(
-    "zynoraGeneratedFloorPlan",
-    JSON.stringify(floorPlan)
-  );
+    localStorage.setItem(
+      "zynoraGeneratedFloorPlan",
+      JSON.stringify(
+        selectedCandidate.plan
+      )
+    );
 
-  navigate("/3d-design");
-}
+    navigate("/3d-design");
+  }
+
+
+  // ==========================================================
+  // MAIN UI
+  // ==========================================================
 
   return (
-    <main className="min-h-screen bg-slate-950 px-5 py-10 text-white">
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-8">
-          <p className="text-sm font-semibold uppercase tracking-widest text-emerald-400">
-            ZYNORA Floor Planner
-          </p>
+    <main className="fp-page">
+      <div className="fp-shell">
 
-          <h1 className="mt-2 text-4xl font-bold">
-            Architectural Floor Plan
-          </h1>
+        <header className="fp-header">
+          <div>
+            <p className="fp-eyebrow">
+              ZYNORA AI FLOOR PLANNER
+            </p>
 
-          <p className="mt-3 max-w-2xl text-slate-400">
-            Conceptual architectural plan
-            generated from the confirmed
-            building footprint.
-          </p>
-        </header>
+            <h1>
+              Choose Your Floor Plan
+            </h1>
 
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="min-w-0 rounded-3xl border border-white/10 bg-white/5 p-4">
-            <FloorPlanCanvas
-              floorPlan={floorPlan}
-              project={project}
-            />
+            <p className="fp-header-copy">
+              ZYNORA generated three
+              personalized layouts and ranked
+              them using the trained
+              machine-learning layout model.
+            </p>
           </div>
 
-          <aside className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <h2 className="text-2xl font-semibold">
-              Plan Information
+          <div className="fp-backend-status">
+            <span>
+              {
+                backendSummary
+                  .candidateCount
+              }{" "}
+              valid options
+            </span>
+
+            <span>
+              {
+                backendSummary
+                  .rejectedCount
+              }{" "}
+              rejected
+            </span>
+          </div>
+        </header>
+
+
+        <section className="fp-project-strip">
+          <ProjectStat
+            label="PROJECT"
+            value={
+              project?.name ||
+              "Generated Home"
+            }
+          />
+
+          <ProjectStat
+            label="BUILDING"
+            value={`${formatNumber(
+              layout?.building?.length
+            )}' × ${formatNumber(
+              layout?.building?.width
+            )}'`}
+          />
+
+          <ProjectStat
+            label="BEDROOMS"
+            value={
+              project?.bedrooms ||
+              "—"
+            }
+          />
+
+          <ProjectStat
+            label="BATHROOMS"
+            value={
+              project?.bathrooms ||
+              "—"
+            }
+          />
+
+          <ProjectStat
+            label="FLOORS"
+            value={
+              project?.floors ||
+              "—"
+            }
+          />
+        </section>
+
+
+        <section className="fp-candidate-grid">
+          {candidates.map(
+            (
+              candidate,
+              index
+            ) => {
+              const selected =
+                candidate.id ===
+                selectedCandidate?.id;
+
+              const plan =
+                candidate.plan;
+
+              const floors =
+                getFloorPlans(plan);
+
+              return (
+                <article
+                  key={
+                    candidate.id ||
+                    index
+                  }
+                  className={[
+                    "fp-candidate-card",
+                    selected
+                      ? "is-selected"
+                      : "",
+                    candidate.recommended
+                      ? "is-recommended"
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  <div className="fp-card-top">
+                    <div>
+                      <p className="fp-option-label">
+                        OPTION{" "}
+                        {String.fromCharCode(
+                          65 + index
+                        )}
+                      </p>
+
+                      <h2>
+                        {candidate.title}
+                      </h2>
+
+                      <p className="fp-strategy">
+                        {formatStrategy(
+                          candidate.strategy
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="fp-score-area">
+                      {candidate.recommended && (
+                        <span className="fp-recommended-badge">
+                          ★ RECOMMENDED
+                        </span>
+                      )}
+
+                      <strong>
+                        {formatMLScore(
+                          candidate
+                        )}
+                      </strong>
+
+                      <span>
+                        ML MATCH
+                      </span>
+                    </div>
+                  </div>
+
+
+                  <div className="fp-reason-box">
+                    <p>
+                      Why ZYNORA recommends
+                      this option
+                    </p>
+
+                    <ul>
+                      {getReasons(
+                        candidate
+                      ).map(
+                        (
+                          reason,
+                          reasonIndex
+                        ) => (
+                          <li
+                            key={
+                              reasonIndex
+                            }
+                          >
+                            ✓ {reason}
+                          </li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+
+
+                  <div className="fp-floor-stack">
+                    {floors.map(
+                      (
+                        floor,
+                        floorIndex
+                      ) => {
+                        const floorName =
+                          floor.name ||
+                          getFloorName(
+                            floorIndex
+                          );
+
+                        return (
+                          <section
+                            className="fp-floor-card"
+                            key={
+                              floor.level ??
+                              floorIndex
+                            }
+                          >
+                            <div className="fp-floor-heading">
+                              <div>
+                                <h3>
+                                  {floorName}
+                                </h3>
+
+                                <p>
+                                  {
+                                    safeArray(
+                                      floor.rooms
+                                    ).length
+                                  }{" "}
+                                  spaces
+                                </p>
+                              </div>
+
+                              <span>
+                                {
+                                  plan.width
+                                }'
+                                {" × "}
+                                {
+                                  plan.height
+                                }'
+                              </span>
+                            </div>
+
+                            <div className="fp-canvas-frame">
+                              <FloorPlanCanvas
+                                floorPlan={
+                                  createFloorPreview(
+                                    plan,
+                                    floor,
+                                    floorIndex
+                                  )
+                                }
+                                project={
+                                  project
+                                }
+                                preview
+                                floorName={
+                                  floorName
+                                }
+                              />
+                            </div>
+                          </section>
+                        );
+                      }
+                    )}
+                  </div>
+
+
+                  <div className="fp-plan-stats">
+                    <MiniStat
+                      label="ROOMS"
+                      value={
+                        safeArray(
+                          plan.rooms
+                        ).length
+                      }
+                    />
+
+                    <MiniStat
+                      label="DOORS"
+                      value={
+                        safeArray(
+                          plan.doors
+                        ).length
+                      }
+                    />
+
+                    <MiniStat
+                      label="WINDOWS"
+                      value={
+                        safeArray(
+                          plan.windows
+                        ).length
+                      }
+                    />
+                  </div>
+
+
+                  <div className="fp-bath-summary">
+                    <span>
+                      Indoor bathrooms:
+                      {" "}
+                      <strong>
+                        {
+                          plan
+                            .indoor_bathrooms ??
+                          plan
+                            .actual_bathrooms ??
+                          "—"
+                        }
+                      </strong>
+                    </span>
+
+                    <span>
+                      External:
+                      {" "}
+                      <strong>
+                        {
+                          plan
+                            .external_bathrooms ??
+                          0
+                        }
+                      </strong>
+                    </span>
+                  </div>
+
+
+                  <button
+                    type="button"
+                    className={
+                      selected
+                        ? "fp-select-button selected"
+                        : "fp-select-button"
+                    }
+                    onClick={() =>
+                      handleSelect(
+                        candidate.id
+                      )
+                    }
+                  >
+                    {selected
+                      ? "✓ Selected"
+                      : "Select This Plan"}
+                  </button>
+                </article>
+              );
+            }
+          )}
+        </section>
+
+
+        <section className="fp-current-selection">
+          <div>
+            <p className="fp-eyebrow">
+              CURRENT SELECTION
+            </p>
+
+            <h2>
+              {
+                selectedCandidate
+                  ?.title
+              }
             </h2>
 
-            <div className="mt-6 space-y-4">
-              <InfoRow
-                label="Building length"
-                value={`${planWidth.toFixed(
-                  2
-                )} ${unit}`}
-              />
-
-              <InfoRow
-                label="Building width"
-                value={`${planHeight.toFixed(
-                  2
-                )} ${unit}`}
-              />
-
-              <InfoRow
-                label="Building area"
-                value={`${(
-                  planWidth *
-                  planHeight
-                ).toFixed(2)} sq ${unit}`}
-              />
-
-              <InfoRow
-                label="Requested floors"
-                value={requestedFloors}
-              />
-
-              <InfoRow
-                label="Rooms"
-                value={rooms.length}
-              />
-
-              <InfoRow
-                label="Doors"
-                value={doors.length}
-              />
-
-              <InfoRow
-                label="Windows"
-                value={windows.length}
-              />
-
-              <InfoRow
-                label="Furniture"
-                value={furniture.length}
-              />
-
-              <InfoRow
-                label="Rotation"
-                value={`${safeNumber(
-                  floorPlan.rotation
-                )}°`}
-              />
-
-              <InfoRow
-                label="Match score"
-                value={formatMatchScore(
-                  floorPlan
+            <p>
+              ML suitability:
+              {" "}
+              <strong>
+                {formatMLScore(
+                  selectedCandidate
                 )}
-              />
+              </strong>
+            </p>
+          </div>
 
-              <InfoRow
-                label="Source plan"
-                value={
-                  floorPlan
-                    ?.matched_plan
-                    ?.name ||
-                  floorPlan
-                    ?.source_plan_id ||
-                  "Not available"
-                }
-              />
-            </div>
-
-            {requestedFloors > 1 &&
-              !Array.isArray(
-                floorPlan.floors
-              ) && (
-                <div className="mt-6 rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-200">
-                  The project requests{" "}
-                  {requestedFloors} floors,
-                  but the backend currently
-                  returned one floor-plan
-                  layout.
-                </div>
-              )}
-
-            <button
-  type="button"
-  onClick={handleSaveFloorPlan}
-  className="mt-8 w-full rounded-xl bg-emerald-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-emerald-400"
->
-  Generate 3D Design
-</button>
-
+          <div className="fp-selection-actions">
             <button
               type="button"
+              className="fp-secondary-button"
               onClick={() =>
-                window.location.reload()
+                navigate(
+                  "/site-planner"
+                )
               }
-              className="mt-3 w-full rounded-xl border border-emerald-400/30 px-5 py-3 font-semibold text-emerald-300 transition hover:bg-emerald-400/10"
-            >
-              Generate Again
-            </button>
-
-            <button
-              type="button"
-              onClick={() =>
-                navigate("/site-planner")
-              }
-              className="mt-3 w-full rounded-xl border border-white/15 px-5 py-3 font-semibold transition hover:bg-white/5"
             >
               Back to Site Planner
             </button>
-          </aside>
+
+            <button
+              type="button"
+              className="fp-secondary-button"
+              onClick={() =>
+                window.location.reload()
+              }
+            >
+              Generate New Options
+            </button>
+
+            <button
+              type="button"
+              className="fp-primary-button"
+              onClick={
+                handleContinue
+              }
+            >
+              Create 3D From Selected Plan →
+            </button>
+          </div>
         </section>
+
       </div>
     </main>
   );
 }
 
-function normalizeProject(project) {
+
+// ============================================================
+// BACKEND RESPONSE HELPERS
+// ============================================================
+
+function extractCandidates(
+  response
+) {
+  if (!response) {
+    return [];
+  }
+
+  if (
+    Array.isArray(
+      response.candidates
+    )
+  ) {
+    return response.candidates;
+  }
+
+  const oldPlan =
+    response.floor_plan ||
+    response.adapted_plan ||
+    response.generated_plan ||
+    response.plan;
+
+  if (oldPlan) {
+    return [
+      {
+        id: "candidate-a",
+        title:
+          "Generated Floor Plan",
+        recommended: true,
+        plan: oldPlan,
+      },
+    ];
+  }
+
+  if (
+    Array.isArray(
+      response.rooms
+    )
+  ) {
+    return [
+      {
+        id: "candidate-a",
+        title:
+          "Generated Floor Plan",
+        recommended: true,
+        plan: response,
+      },
+    ];
+  }
+
+  return [];
+}
+
+
+function normalizeCandidate(
+  candidate,
+  layout,
+  index
+) {
+  const rawPlan =
+    candidate?.floor_plan ||
+    candidate?.plan ||
+    candidate?.generated_plan ||
+    candidate?.adapted_plan ||
+    candidate;
+
+  const plan =
+    normalizeFloorPlan(
+      rawPlan,
+      layout
+    );
+
+  return {
+    ...candidate,
+
+    id:
+      candidate?.id ||
+      `candidate-${index + 1}`,
+
+    title:
+      candidate?.title ||
+      candidate?.name ||
+      `Floor Plan ${index + 1}`,
+
+    recommended:
+      Boolean(
+        candidate?.recommended
+      ),
+
+    plan,
+  };
+}
+
+
+function getCandidateRank(
+  candidate
+) {
+  const rank = Number(
+    candidate?.ml_ranking?.rank
+  );
+
+  return Number.isFinite(rank)
+    ? rank
+    : 999;
+}
+
+
+function formatMLScore(
+  candidate
+) {
+  const score = Number(
+    candidate?.ml_ranking
+      ?.ml_score
+  );
+
+  if (
+    !Number.isFinite(score)
+  ) {
+    return "--";
+  }
+
+  return `${score.toFixed(1)}%`;
+}
+
+
+function getReasons(
+  candidate
+) {
+  const reasons =
+    safeArray(
+      candidate?.ml_ranking
+        ?.reasons
+    );
+
+  if (reasons.length > 0) {
+    return reasons.slice(
+      0,
+      3
+    );
+  }
+
+  if (
+    candidate?.strategy ===
+    "open_living"
+  ) {
+    return [
+      "Larger connected living and family spaces.",
+      "Efficient movement between shared spaces.",
+      "Strong natural-light potential.",
+    ];
+  }
+
+  if (
+    candidate?.strategy ===
+    "privacy"
+  ) {
+    return [
+      "Stronger separation between private spaces.",
+      "Quieter bedroom and family zones.",
+      "Efficient circulation between floors.",
+    ];
+  }
+
+  return [
+    "Balanced distribution of social and private spaces.",
+    "Strong accessibility support.",
+    "Good overall layout efficiency.",
+  ];
+}
+
+
+function formatStrategy(
+  strategy
+) {
+  if (
+    strategy ===
+    "open_living"
+  ) {
+    return "Open social living";
+  }
+
+  if (
+    strategy ===
+    "privacy"
+  ) {
+    return "Privacy-first zoning";
+  }
+
+  return "Balanced family planning";
+}
+
+
+// ============================================================
+// FLOOR HELPERS
+// ============================================================
+
+function getFloorPlans(plan) {
+  if (
+    Array.isArray(
+      plan?.floor_plans
+    ) &&
+    plan.floor_plans.length > 0
+  ) {
+    return plan.floor_plans;
+  }
+
+  if (
+    Array.isArray(
+      plan?.floors
+    ) &&
+    plan.floors.length > 0
+  ) {
+    return plan.floors;
+  }
+
+  return [
+    {
+      level: 0,
+      name: "Ground Floor",
+      rooms:
+        safeArray(
+          plan?.rooms
+        ),
+      doors:
+        safeArray(
+          plan?.doors
+        ),
+      windows:
+        safeArray(
+          plan?.windows
+        ),
+      stairs:
+        safeArray(
+          plan?.stairs
+        ),
+    },
+  ];
+}
+
+
+function createFloorPreview(
+  fullPlan,
+  floor,
+  floorIndex
+) {
+  const level =
+    floor?.level ??
+    floorIndex;
+
+  const floorRooms =
+    safeArray(
+      floor?.rooms
+    );
+
+  const roomIds =
+    new Set(
+      floorRooms.map(
+        (room) =>
+          room.id
+      )
+    );
+
+  const floorFurniture =
+    safeArray(
+      fullPlan?.furniture
+    ).filter(
+      (item) =>
+        roomIds.has(
+          item?.room_id
+        )
+    );
+
+  const floorDoors =
+    safeArray(
+      floor?.doors
+    ).length > 0
+      ? safeArray(
+          floor?.doors
+        )
+      : safeArray(
+          fullPlan?.doors
+        ).filter(
+          (door) =>
+            Number(
+              door?.floor_level
+            ) ===
+              Number(level) ||
+            roomIds.has(
+              door?.room_id
+            ) ||
+            roomIds.has(
+              door
+                ?.from_room_id
+            ) ||
+            roomIds.has(
+              door
+                ?.to_room_id
+            )
+        );
+
+  const floorWindows =
+    safeArray(
+      floor?.windows
+    ).length > 0
+      ? safeArray(
+          floor?.windows
+        )
+      : safeArray(
+          fullPlan?.windows
+        ).filter(
+          (windowItem) =>
+            Number(
+              windowItem
+                ?.floor_level
+            ) ===
+              Number(level) ||
+            roomIds.has(
+              windowItem
+                ?.room_id
+            )
+        );
+
+  return {
+    ...fullPlan,
+
+    id:
+      `${fullPlan?.id ||
+      "plan"}-floor-${level}`,
+
+    rooms:
+      floorRooms,
+
+    doors:
+      floorDoors,
+
+    windows:
+      floorWindows,
+
+    furniture:
+      floorFurniture,
+
+    floor_plans: [
+      floor,
+    ],
+
+    floors: [
+      floor,
+    ],
+
+    active_floor_level:
+      level,
+  };
+}
+
+
+function getFloorName(
+  index
+) {
+  if (index === 0) {
+    return "Ground Floor";
+  }
+
+  if (index === 1) {
+    return "First Floor";
+  }
+
+  if (index === 2) {
+    return "Second Floor";
+  }
+
+  return `Floor ${index + 1}`;
+}
+
+
+// ============================================================
+// PROJECT NORMALIZATION
+// ============================================================
+
+function normalizeProject(
+  project
+) {
   const normalizedProject = {
     ...project,
 
     floors: String(
       positiveInteger(
         project?.floors ||
-          project?.numberOfFloors,
+          project
+            ?.numberOfFloors,
         1
       )
     ),
@@ -487,7 +1193,8 @@ function normalizeProject(project) {
     bedrooms: String(
       positiveInteger(
         project?.bedrooms ||
-          project?.numberOfBedrooms,
+          project
+            ?.numberOfBedrooms,
         3
       )
     ),
@@ -495,7 +1202,8 @@ function normalizeProject(project) {
     bathrooms: String(
       positiveInteger(
         project?.bathrooms ||
-          project?.numberOfBathrooms,
+          project
+            ?.numberOfBathrooms,
         1
       )
     ),
@@ -511,19 +1219,6 @@ function normalizeProject(project) {
   return normalizedProject;
 }
 
-function extractFloorPlan(response) {
-  if (!response) {
-    return null;
-  }
-
-  return (
-    response.floor_plan ||
-    response.adapted_plan ||
-    response.generated_plan ||
-    response.plan ||
-    response
-  );
-}
 
 function normalizeFloorPlan(
   plan,
@@ -540,7 +1235,8 @@ function normalizeFloorPlan(
     );
 
   const dimensions =
-    plan?.adapted_plan_dimensions ||
+    plan
+      ?.adapted_plan_dimensions ||
     plan?.dimensions ||
     {};
 
@@ -548,63 +1244,142 @@ function normalizeFloorPlan(
     ...plan,
 
     width:
-      safeNumber(plan?.width) ||
+      safeNumber(
+        plan?.width
+      ) ||
       safeNumber(
         dimensions?.width
       ) ||
       fallbackLength,
 
     height:
-      safeNumber(plan?.height) ||
+      safeNumber(
+        plan?.height
+      ) ||
       safeNumber(
         dimensions?.height
       ) ||
       fallbackWidth,
 
-    rooms: safeArray(
-      plan?.rooms
-    ),
+    rooms:
+      safeArray(
+        plan?.rooms
+      ),
 
-    doors: safeArray(
-      plan?.doors
-    ),
+    doors:
+      safeArray(
+        plan?.doors
+      ),
 
-    windows: safeArray(
-      plan?.windows
-    ),
+    windows:
+      safeArray(
+        plan?.windows
+      ),
 
-    furniture: safeArray(
-      plan?.furniture
-    ),
+    furniture:
+      safeArray(
+        plan?.furniture
+      ),
 
-    floors: safeArray(
-      plan?.floors
-    ),
+    floor_plans:
+      safeArray(
+        plan?.floor_plans
+      ),
 
-    rotation: safeNumber(
-      plan?.rotation
-    ),
+    floors:
+      safeArray(
+        plan?.floors
+      ),
 
-    match_score:
+    rotation:
       safeNumber(
-        plan?.match_score
-      ) ||
-      safeNumber(
-        plan?.matched_plan
-          ?.match_score
+        plan?.rotation
       ),
   };
 }
+
+
+// ============================================================
+// SMALL UI COMPONENTS
+// ============================================================
+
+function ProjectStat({
+  label,
+  value,
+}) {
+  return (
+    <div className="fp-project-stat">
+      <span>
+        {label}
+      </span>
+
+      <strong>
+        {value}
+      </strong>
+    </div>
+  );
+}
+
+
+function MiniStat({
+  label,
+  value,
+}) {
+  return (
+    <div className="fp-mini-stat">
+      <strong>
+        {value}
+      </strong>
+
+      <span>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+
+function LoadingScreen() {
+  return (
+    <main className="fp-page fp-loading-page">
+      <section className="fp-state-card">
+        <div className="fp-spinner" />
+
+        <h1>
+          Generating 3 floor-plan
+          options
+        </h1>
+
+        <p>
+          ZYNORA is generating layouts,
+          validating the geometry and
+          ranking the designs with the
+          trained ML model.
+        </p>
+      </section>
+    </main>
+  );
+}
+
+
+// ============================================================
+// GENERIC HELPERS
+// ============================================================
 
 function positiveInteger(
   value,
   fallback
 ) {
   const numberValue =
-    Number.parseInt(value, 10);
+    Number.parseInt(
+      value,
+      10
+    );
 
   if (
-    Number.isInteger(numberValue) &&
+    Number.isInteger(
+      numberValue
+    ) &&
     numberValue > 0
   ) {
     return numberValue;
@@ -613,11 +1388,13 @@ function positiveInteger(
   return fallback;
 }
 
+
 function safeArray(value) {
   return Array.isArray(value)
     ? value
     : [];
 }
+
 
 function safeNumber(value) {
   const numberValue =
@@ -630,55 +1407,25 @@ function safeNumber(value) {
     : 0;
 }
 
-function formatMatchScore(
-  floorPlan
-) {
-  const score =
-    safeNumber(
-      floorPlan?.match_score
-    ) ||
-    safeNumber(
-      floorPlan?.matched_plan
-        ?.match_score
-    );
 
-  return score.toFixed(2);
+function formatNumber(value) {
+  const numberValue =
+    Number(value);
+
+  if (
+    !Number.isFinite(
+      numberValue
+    )
+  ) {
+    return "—";
+  }
+
+  return Number.isInteger(
+    numberValue
+  )
+    ? String(numberValue)
+    : numberValue.toFixed(1);
 }
 
-function LoadingScreen() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-white">
-      <div className="text-center">
-        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-slate-700 border-t-emerald-400" />
-
-        <h1 className="mt-6 text-2xl font-bold">
-          Generating your floor plan
-        </h1>
-
-        <p className="mt-3 text-slate-400">
-          ZYNORA is selecting and adapting
-          the best residential layout.
-        </p>
-      </div>
-    </main>
-  );
-}
-
-function InfoRow({
-  label,
-  value,
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
-      <span className="text-sm text-slate-400">
-        {label}
-      </span>
-
-      <strong className="max-w-[160px] break-words text-right text-sm">
-        {value}
-      </strong>
-    </div>
-  );
-}
 
 export default FloorPlan;

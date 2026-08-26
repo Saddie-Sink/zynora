@@ -1,0 +1,603 @@
+/* ==========================================================
+   ZYNORA FLOOR PLAN SELECTION PAGE
+   Plain CSS — no Tailwind dependency required
+   ========================================================== */
+
+.fp-page {
+  min-height: 100vh;
+  padding: 48px 24px 70px;
+  background:
+    radial-gradient(
+      circle at 10% 0%,
+      rgba(208, 229, 214, 0.75),
+      transparent 28%
+    ),
+    #f4f7f3;
+  color: #17221c;
+}
+
+.fp-shell {
+  width: min(1680px, 100%);
+  margin: 0 auto;
+}
+
+.fp-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 30px;
+  margin-bottom: 26px;
+}
+
+.fp-eyebrow,
+.fp-option-label {
+  margin: 0;
+  color: #4f7e62;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.fp-header h1 {
+  margin: 10px 0 0;
+  color: #17221c;
+  font-size: clamp(2.2rem, 4vw, 4.2rem);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.fp-header-copy {
+  max-width: 760px;
+  margin: 18px 0 0;
+  color: #68746c;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.fp-backend-status {
+  min-width: 180px;
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid #d8e2da;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.82);
+  color: #486052;
+  font-size: 0.82rem;
+  font-weight: 700;
+  box-shadow: 0 12px 30px rgba(25,55,36,0.06);
+}
+
+.fp-project-strip {
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 1.4fr)
+    repeat(4, minmax(120px, 1fr));
+  overflow: hidden;
+  margin-bottom: 26px;
+  border: 1px solid #dce5de;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 16px 42px rgba(31,59,41,0.06);
+}
+
+.fp-project-stat {
+  min-width: 0;
+  padding: 16px 20px;
+  border-right: 1px solid #e5ebe6;
+}
+
+.fp-project-stat:last-child {
+  border-right: 0;
+}
+
+.fp-project-stat span {
+  display: block;
+  margin-bottom: 6px;
+  color: #829087;
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.fp-project-stat strong {
+  display: block;
+  overflow: hidden;
+  color: #203126;
+  font-size: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-candidate-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 20px;
+}
+
+.fp-candidate-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #d7e0d9;
+  border-radius: 26px;
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 20px 55px rgba(30, 55, 38, 0.08);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.fp-candidate-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 24px 65px rgba(30,55,38,0.12);
+}
+
+.fp-candidate-card.is-selected {
+  border: 2px solid #3e8158;
+  box-shadow:
+    0 0 0 4px rgba(62,129,88,0.09),
+    0 26px 70px rgba(30,55,38,0.13);
+}
+
+.fp-candidate-card.is-recommended {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(235,247,238,0.95),
+      rgba(255,255,255,0.96) 240px
+    );
+}
+
+.fp-card-top {
+  min-height: 128px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 22px 22px 18px;
+}
+
+.fp-card-top h2 {
+  margin: 8px 0 5px;
+  color: #17221c;
+  font-size: 1.45rem;
+  line-height: 1.12;
+}
+
+.fp-strategy {
+  margin: 0;
+  color: #77847c;
+  font-size: 0.82rem;
+}
+
+.fp-score-area {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.fp-score-area strong {
+  display: block;
+  margin-top: 5px;
+  color: #2f7149;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.fp-score-area > span:last-child {
+  display: block;
+  margin-top: 5px;
+  color: #8a968e;
+  font-size: 0.63rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+}
+
+.fp-recommended-badge {
+  display: inline-flex !important;
+  width: max-content;
+  margin-left: auto;
+  padding: 7px 9px;
+  border-radius: 999px;
+  background: #dff0e4;
+  color: #2e6743 !important;
+  font-size: 0.62rem !important;
+  font-weight: 800;
+  letter-spacing: 0.05em !important;
+}
+
+.fp-reason-box {
+  margin: 0 18px 18px;
+  padding: 15px 16px;
+  border: 1px solid #e4ebe5;
+  border-radius: 16px;
+  background: #f7faf7;
+}
+
+.fp-reason-box > p {
+  margin: 0;
+  color: #52635a;
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.fp-reason-box ul {
+  display: grid;
+  gap: 7px;
+  margin: 11px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fp-reason-box li {
+  color: #43534a;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.fp-floor-stack {
+  display: grid;
+  gap: 16px;
+  padding: 0 18px;
+}
+
+.fp-floor-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #dfe6e0;
+  border-radius: 18px;
+  background: #f8faf8;
+}
+
+.fp-floor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 15px;
+  border-bottom: 1px solid #e2e8e3;
+  background: #f5f8f5;
+}
+
+.fp-floor-heading h3 {
+  margin: 0;
+  color: #25372c;
+  font-size: 0.95rem;
+}
+
+.fp-floor-heading p {
+  margin: 4px 0 0;
+  color: #89958d;
+  font-size: 0.7rem;
+}
+
+.fp-floor-heading > span {
+  color: #6f7d74;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fp-canvas-frame {
+  width: 100%;
+  overflow: hidden;
+  padding: 7px;
+  background: #eef2ee;
+}
+
+.fp-canvas-frame > div {
+  width: 100%;
+}
+
+.fp-canvas-frame svg {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100%;
+  background: white;
+}
+
+.fp-plan-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 18px;
+}
+
+.fp-mini-stat {
+  padding: 12px 8px;
+  border: 1px solid #e1e8e2;
+  border-radius: 13px;
+  background: #f7faf7;
+  text-align: center;
+}
+
+.fp-mini-stat strong {
+  display: block;
+  color: #26382d;
+  font-size: 1.05rem;
+}
+
+.fp-mini-stat span {
+  display: block;
+  margin-top: 4px;
+  color: #8a978f;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.fp-bath-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -4px 18px 18px;
+  color: #607168;
+  font-size: 0.73rem;
+}
+
+.fp-bath-summary strong {
+  color: #263a2e;
+}
+
+.fp-select-button {
+  width: calc(100% - 36px);
+  margin: 0 18px 20px;
+  padding: 14px 16px;
+  border: 1px solid #b9cabf;
+  border-radius: 14px;
+  background: white;
+  color: #2f5540;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.fp-select-button:hover {
+  border-color: #55876a;
+  background: #eef5f0;
+}
+
+.fp-select-button.selected {
+  border-color: #245c39;
+  background: #245c39;
+  color: white;
+}
+
+.fp-current-selection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 26px;
+  padding: 24px 26px;
+  border: 1px solid #cadbd0;
+  border-radius: 22px;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(226,241,230,0.95),
+      rgba(255,255,255,0.95)
+    );
+  box-shadow: 0 16px 40px rgba(31,59,41,0.07);
+}
+
+.fp-current-selection h2 {
+  margin: 7px 0 7px;
+  color: #1d3125;
+  font-size: 1.5rem;
+}
+
+.fp-current-selection p {
+  margin: 0;
+  color: #65736a;
+}
+
+.fp-current-selection strong {
+  color: #2b6a43;
+}
+
+.fp-selection-actions,
+.fp-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.fp-primary-button,
+.fp-secondary-button {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 18px;
+  border-radius: 13px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.fp-primary-button {
+  border: 1px solid #234f34;
+  background: #234f34;
+  color: white;
+}
+
+.fp-primary-button:hover {
+  background: #2d6843;
+}
+
+.fp-secondary-button {
+  border: 1px solid #becdc2;
+  background: rgba(255,255,255,0.8);
+  color: #355441;
+}
+
+.fp-secondary-button:hover {
+  background: #eef4ef;
+}
+
+.fp-loading-page {
+  display: grid;
+  place-items: center;
+}
+
+.fp-state-card {
+  width: min(560px, 100%);
+  margin: 80px auto;
+  padding: 38px;
+  border: 1px solid #dce5de;
+  border-radius: 24px;
+  background: white;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(31,59,41,0.09);
+}
+
+.fp-state-card h1 {
+  margin: 14px 0;
+  color: #1d2f24;
+  font-size: 2rem;
+}
+
+.fp-state-card > p:not(.fp-eyebrow) {
+  color: #67756c;
+  line-height: 1.65;
+}
+
+.fp-state-card .fp-primary-button {
+  margin-top: 18px;
+}
+
+.fp-state-actions {
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.fp-spinner {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 20px;
+  border: 5px solid #dce7df;
+  border-top-color: #397752;
+  border-radius: 50%;
+  animation: fp-spin 0.8s linear infinite;
+}
+
+@keyframes fp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1280px) {
+  .fp-candidate-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fp-candidate-card {
+    width: min(980px, 100%);
+    margin: 0 auto;
+  }
+
+  .fp-project-strip {
+    grid-template-columns:
+      repeat(3, 1fr);
+  }
+
+  .fp-project-stat:nth-child(3) {
+    border-right: 0;
+  }
+
+  .fp-project-stat:nth-child(n + 4) {
+    border-top: 1px solid #e5ebe6;
+  }
+}
+
+@media (max-width: 780px) {
+  .fp-page {
+    padding: 28px 12px 50px;
+  }
+
+  .fp-header,
+  .fp-current-selection {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .fp-backend-status {
+    min-width: 0;
+  }
+
+  .fp-project-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .fp-project-stat {
+    border-right: 1px solid #e5ebe6;
+    border-top: 1px solid #e5ebe6;
+  }
+
+  .fp-project-stat:nth-child(1),
+  .fp-project-stat:nth-child(2) {
+    border-top: 0;
+  }
+
+  .fp-project-stat:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .fp-card-top {
+    min-height: 0;
+    flex-direction: column;
+  }
+
+  .fp-score-area {
+    width: 100%;
+    text-align: left;
+  }
+
+  .fp-recommended-badge {
+    margin-left: 0;
+  }
+
+  .fp-bath-summary {
+    flex-direction: column;
+  }
+
+  .fp-selection-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .fp-selection-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .fp-project-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .fp-project-stat {
+    border-right: 0;
+  }
+
+  .fp-project-stat:nth-child(2) {
+    border-top: 1px solid #e5ebe6;
+  }
+
+  .fp-floor-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .fp-plan-stats {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}

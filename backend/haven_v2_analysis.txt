@@ -1,0 +1,60 @@
+﻿
+========================================================================
+ZYNORA V2 — HAVEN BACKEND ANALYSIS
+========================================================================
+
+PROJECT
+{
+  "name": "Haven",
+  "location": "Coimbatore, Tamil Nadu",
+  "propertyType": "Independent House",
+  "floors": 2,
+  "landLength": 39,
+  "landWidth": 39,
+  "measurementUnit": "Feet",
+  "roadFacing": "East",
+  "plotShape": "Rectangle",
+  "familySize": 5,
+  "children": 2,
+  "seniorCitizens": 1,
+  "pets": 1,
+  "bedrooms": 3,
+  "bathrooms": 4,
+  "externalBathrooms": 1,
+  "external_bathrooms": 1,
+  "parkingSpaces": 2,
+  "workFromHome": "Yes",
+  "lifestyleFeatures": [
+    "Home Office",
+    "Garden",
+    "Prayer Room"
+  ],
+  "accessibilityFeatures": [
+    "Entrance Ramp",
+    "Accessible Bathroom",
+    "Ground-Floor Bedroom"
+  ],
+  "budget": 7500000,
+  "currency": "INR",
+  "budgetFlexibility": "Up to 10%",
+  "constructionPriority": "Balanced",
+  "style": "Modern",
+  "preferredMaterials": [
+    "Concrete",
+    "Wood",
+    "Glass"
+  ],
+  "sustainabilityFeatures": [
+    "Natural Ventilation",
+    "Rainwater Harvesting"
+  ],
+  "designNotes": "Create a practical Indian family house with good privacy, natural ventilation, a usable staircase, ground-floor bedroom for senior citizen, and one external bathroom accessible from outside."
+}
+
+========================================================================
+GENERATING CANDIDATES...
+========================================================================
+
+❌ GENERATION FAILED
+TypeError
+generate_structural_candidates() missing 5 required positional arguments: 'target_height', 'bedrooms', 'bathrooms', 'floors', and 'project'

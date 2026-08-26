@@ -174,6 +174,19 @@ def validate_plan(
                 if not isinstance(room_b, dict):
                     continue
 
+                floor_a = int(
+                    room_a.get("floor_level", 0)
+                )
+
+                floor_b = int(
+                    room_b.get("floor_level", 0)
+                )
+
+                # Rooms on different floors may occupy
+                # the same X/Y coordinates.
+                if floor_a != floor_b:
+                    continue
+
                 if rooms_overlap(
                     room_a,
                     room_b,

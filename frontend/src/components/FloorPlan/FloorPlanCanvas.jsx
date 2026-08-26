@@ -1,6 +1,8 @@
 function FloorPlanCanvas({
   floorPlan,
   project,
+  preview = false,
+  floorName = "Floor Plan",
 }) {
   if (!floorPlan) {
     return null;
@@ -50,13 +52,29 @@ function FloorPlanCanvas({
     );
   }
 
-  const sheetWidth = 1200;
-  const sheetHeight = 780;
+  const sheetWidth = preview
+    ? 900
+    : 1200;
 
-  const drawingAreaX = 140;
-  const drawingAreaY = 120;
-  const drawingAreaWidth = 760;
-  const drawingAreaHeight = 550;
+  const sheetHeight = preview
+    ? 700
+    : 780;
+
+  const drawingAreaX = preview
+    ? 55
+    : 140;
+
+  const drawingAreaY = preview
+    ? 75
+    : 120;
+
+  const drawingAreaWidth = preview
+    ? 790
+    : 760;
+
+  const drawingAreaHeight = preview
+    ? 570
+    : 550;
 
   const scale = Math.min(
     drawingAreaWidth / floorPlanWidth,
@@ -92,12 +110,19 @@ function FloorPlanCanvas({
   ).toUpperCase();
 
   return (
-    <div className="overflow-auto rounded-2xl bg-slate-200 p-3">
+    <div
+      className={
+        preview
+          ? "w-full overflow-hidden bg-white"
+          : "overflow-auto rounded-2xl bg-slate-200 p-3"
+      }
+    >
       <svg
         viewBox={`0 0 ${sheetWidth} ${sheetHeight}`}
-        className="h-auto w-full min-w-[850px]"
+        preserveAspectRatio="xMidYMid meet"
+        className="block h-auto w-full"
         role="img"
-        aria-label="ZYNORA architectural floor plan"
+        aria-label={`ZYNORA ${floorName}`}
       >
         <defs>
           <pattern
@@ -215,37 +240,49 @@ function FloorPlanCanvas({
             drawingAreaX +
             drawingAreaWidth / 2
           }
-          y="72"
+          y={preview ? 55 : 72}
           textAnchor="middle"
-          fontSize="12"
+          fontSize={preview ? 16 : 12}
+          fontWeight={preview ? "700" : "400"}
           fill="#4b5563"
         >
-          AI-GENERATED CONCEPTUAL GROUND
-          FLOOR PLAN
+          {String(floorName).toUpperCase()}
         </text>
 
-        <NorthArrow
-          x={72}
-          y={112}
-        />
+        {!preview && (
+          <NorthArrow
+            x={72}
+            y={112}
+          />
+        )}
 
-        <HorizontalDimension
-          x1={planX}
-          x2={planX + renderedPlanWidth}
-          y={planY - 25}
-          label={`${floorPlanWidth.toFixed(
-            2
-          )} ft`}
-        />
+        {!preview && (
+          <HorizontalDimension
+            x1={planX}
+            x2={
+              planX +
+              renderedPlanWidth
+            }
+            y={planY - 25}
+            label={`${floorPlanWidth.toFixed(
+              2
+            )} ft`}
+          />
+        )}
 
-        <VerticalDimension
-          x={planX - 30}
-          y1={planY}
-          y2={planY + renderedPlanHeight}
-          label={`${floorPlanHeight.toFixed(
-            2
-          )} ft`}
-        />
+        {!preview && (
+          <VerticalDimension
+            x={planX - 30}
+            y1={planY}
+            y2={
+              planY +
+              renderedPlanHeight
+            }
+            label={`${floorPlanHeight.toFixed(
+              2
+            )} ft`}
+          />
+        )}
 
         {/* Rooms */}
 
@@ -329,14 +366,16 @@ function FloorPlanCanvas({
           pointerEvents="none"
         />
 
-        <TitlePanel
-          x={940}
-          y={32}
-          width={240}
-          height={716}
-          floorPlan={floorPlan}
-          project={project}
-        />
+        {!preview && (
+          <TitlePanel
+            x={940}
+            y={32}
+            width={240}
+            height={716}
+            floorPlan={floorPlan}
+            project={project}
+          />
+        )}
       </svg>
     </div>
   );
@@ -1285,7 +1324,7 @@ function TitlePanel({
         fontSize="19"
         fontWeight="700"
       >
-        GROUND FLOOR PLAN
+        ARCHITECTURAL FLOOR PLAN
       </text>
 
       <line

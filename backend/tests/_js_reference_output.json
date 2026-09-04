@@ -1,0 +1,364 @@
+{
+  "fixtureA": {
+    "stats": {
+      "sourceWalls": 5,
+      "mergedWalls": 4,
+      "duplicateWallsRemoved": 1,
+      "exteriorWalls": 4,
+      "exteriorShellClosed": true,
+      "exteriorOpenNodes": 0,
+      "shellRepairedFromRooms": false,
+      "indoorRooms": 0,
+      "roomsOutsideOriginalShell": 0,
+      "disconnectedShellComponents": 0,
+      "shellBridgesAdded": 0
+    },
+    "walls": [
+      {
+        "id": "south",
+        "x1": 0,
+        "z1": 0.00025,
+        "x2": 10.000499999999999,
+        "z2": 0.00025,
+        "height": 2.8,
+        "thickness": 0.16,
+        "color": "#eee9e1",
+        "isExterior": true,
+        "openings": [
+          {
+            "id": "front-door",
+            "type": "door",
+            "start": 4.5,
+            "end": 5.5,
+            "center": 5,
+            "width": 1,
+            "bottom": 0,
+            "top": 2.1,
+            "height": 2.1,
+            "worldStart": {
+              "x": 4.5,
+              "z": 0.0005
+            },
+            "worldEnd": {
+              "x": 5.5,
+              "z": 0.0005
+            }
+          }
+        ],
+        "sourceIds": [
+          "south",
+          "south-copy"
+        ]
+      },
+      {
+        "id": "east",
+        "x1": 10.000499999999999,
+        "z1": 0.00025,
+        "x2": 10,
+        "z2": 7,
+        "height": 2.8,
+        "thickness": 0.16,
+        "color": "#eee9e1",
+        "isExterior": true,
+        "openings": []
+      },
+      {
+        "id": "north",
+        "x1": 10,
+        "z1": 7,
+        "x2": 0,
+        "z2": 7,
+        "height": 2.8,
+        "thickness": 0.16,
+        "color": "#eee9e1",
+        "isExterior": true,
+        "openings": []
+      },
+      {
+        "id": "west",
+        "x1": 0,
+        "z1": 7,
+        "x2": 0,
+        "z2": 0.00025,
+        "height": 2.8,
+        "thickness": 0.16,
+        "color": "#eee9e1",
+        "isExterior": true,
+        "openings": []
+      }
+    ]
+  },
+  "fixtureB": {
+    "validation": {
+      "valid": true,
+      "errors": [],
+      "warnings": [],
+      "stats": {
+        "rooms": 0,
+        "classifiedRooms": 0,
+        "lowConfidenceRooms": 0,
+        "walls": 4,
+        "exteriorWalls": 4,
+        "doors": 0,
+        "windows": 0,
+        "shellClosed": true,
+        "indoorRooms": 0,
+        "roomsOutsideShell": 0
+      }
+    },
+    "document": {
+      "schemaVersion": "zynora.floorplan.v1",
+      "id": "test-plan",
+      "unit": "m",
+      "coordinateSystem": "x-right_y-up_z-forward",
+      "metadata": {
+        "source": "unit-test",
+        "floorCount": 1,
+        "activeFloorId": "ground-floor",
+        "roomClassifier": "v5"
+      },
+      "floors": [
+        {
+          "id": "ground-floor",
+          "level": 0,
+          "elevation": 0,
+          "height": 2.8,
+          "outline": [
+            {
+              "x": 0,
+              "z": 0
+            },
+            {
+              "x": 10,
+              "z": 0
+            },
+            {
+              "x": 10,
+              "z": 7
+            },
+            {
+              "x": 0,
+              "z": 7
+            }
+          ],
+          "rooms": [],
+          "walls": [
+            {
+              "id": "south",
+              "start": {
+                "x": 0,
+                "z": 0
+              },
+              "end": {
+                "x": 10,
+                "z": 0
+              },
+              "height": 2.8,
+              "thickness": 0.16,
+              "isExterior": true,
+              "material": {
+                "color": "#eee9e1"
+              },
+              "openings": []
+            },
+            {
+              "id": "east",
+              "start": {
+                "x": 10,
+                "z": 0
+              },
+              "end": {
+                "x": 10,
+                "z": 7
+              },
+              "height": 2.8,
+              "thickness": 0.16,
+              "isExterior": true,
+              "material": {
+                "color": "#eee9e1"
+              },
+              "openings": []
+            },
+            {
+              "id": "north",
+              "start": {
+                "x": 10,
+                "z": 7
+              },
+              "end": {
+                "x": 0,
+                "z": 7
+              },
+              "height": 2.8,
+              "thickness": 0.16,
+              "isExterior": true,
+              "material": {
+                "color": "#eee9e1"
+              },
+              "openings": []
+            },
+            {
+              "id": "west",
+              "start": {
+                "x": 0,
+                "z": 7
+              },
+              "end": {
+                "x": 0,
+                "z": 0
+              },
+              "height": 2.8,
+              "thickness": 0.16,
+              "isExterior": true,
+              "material": {
+                "color": "#eee9e1"
+              },
+              "openings": []
+            }
+          ],
+          "exteriorWalls": [
+            {
+              "id": "south",
+              "start": {
+                "x": 0,
+                "z": 0
+              },
+              "end": {
+                "x": 10,
+                "z": 0
+              },
+              "height": 2.8,
+              "thickness": 0.16,
+              "isExterior": true,
+              "material": {
+                "color": "#eee9e1"
+              },
+              "openings": []
+            },
+            {
+              "id": "east",
+              "start": {
+                "x": 10,
+                "z": 0
+              },
+              "end": {
+                "x": 10,
+                "z": 7
+              },
+              "height": 2.8,
+              "thickness": 0.16,
+              "isExterior": true,
+              "material": {
+                "color": "#eee9e1"
+              },
+              "openings": []
+            },
+            {
+              "id": "north",
+              "start": {
+                "x": 10,
+                "z": 7
+              },
+              "end": {
+                "x": 0,
+                "z": 7
+              },
+              "height": 2.8,
+              "thickness": 0.16,
+              "isExterior": true,
+              "material": {
+                "color": "#eee9e1"
+              },
+              "openings": []
+            },
+            {
+              "id": "west",
+              "start": {
+                "x": 0,
+                "z": 7
+              },
+              "end": {
+                "x": 0,
+                "z": 0
+              },
+              "height": 2.8,
+              "thickness": 0.16,
+              "isExterior": true,
+              "material": {
+                "color": "#eee9e1"
+              },
+              "openings": []
+            }
+          ],
+          "slabs": [
+            {
+              "id": "ground-floor-slab",
+              "outline": [
+                {
+                  "x": 0,
+                  "z": 0
+                },
+                {
+                  "x": 10,
+                  "z": 0
+                },
+                {
+                  "x": 10,
+                  "z": 7
+                },
+                {
+                  "x": 0,
+                  "z": 7
+                }
+              ],
+              "elevation": -0.16,
+              "thickness": 0.18
+            }
+          ],
+          "roof": {
+            "id": "ground-floor-roof",
+            "type": "flat",
+            "outline": [
+              {
+                "x": 0,
+                "z": 0
+              },
+              {
+                "x": 10,
+                "z": 0
+              },
+              {
+                "x": 10,
+                "z": 7
+              },
+              {
+                "x": 0,
+                "z": 7
+              }
+            ],
+            "elevation": 2.8,
+            "thickness": 0.22,
+            "parapetHeight": 0.35
+          }
+        }
+      ],
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "stats": {
+          "rooms": 0,
+          "classifiedRooms": 0,
+          "lowConfidenceRooms": 0,
+          "walls": 4,
+          "exteriorWalls": 4,
+          "doors": 0,
+          "windows": 0,
+          "shellClosed": true,
+          "indoorRooms": 0,
+          "roomsOutsideShell": 0
+        }
+      }
+    }
+  }
+}

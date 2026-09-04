@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SYNTHETIC TEST FIXTURE - NOT A REAL CUBICASA SAMPLE.
+
+  Purpose: exercise the "multiple openings on the same wall" edge case
+  explicitly called out in the SVG adapter task requirements, which the
+  primary two-room fixture does not cover (each of its walls has at most
+  one opening). One room, one exterior wall carrying two windows.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="500" viewBox="0 0 1000 500">
+  <g id="Floor-1">
+
+    <g class="Space LivingRoom" id="room-main">
+      <polygon class="BoundaryPolygon" points="0,0 1000,0 1000,400 0,400" />
+    </g>
+
+    <!-- EXTERIOR WALL with TWO windows, at different offsets along the wall -->
+    <g class="Wall External" id="wall-north">
+      <polygon points="0,-10 1000,-10 1000,10 0,10" />
+      <g class="Window">
+        <polygon points="100,-10 200,-10 200,10 100,10" />
+      </g>
+      <g class="Window">
+        <polygon points="700,-10 850,-10 850,10 700,10" />
+      </g>
+    </g>
+
+    <g class="Wall External" id="wall-south">
+      <polygon points="0,390 1000,390 1000,410 0,410" />
+    </g>
+
+    <g class="Wall External" id="wall-east">
+      <polygon points="990,0 1010,0 1010,400 990,400" />
+    </g>
+
+    <g class="Wall External" id="wall-west">
+      <polygon points="-10,0 10,0 10,400 -10,400" />
+    </g>
+
+  </g>
+</svg>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SYNTHETIC TEST FIXTURE - NOT A REAL CUBICASA SAMPLE.
+
+  No real CubiCasa/SVG floorplan asset exists anywhere in this repository,
+  its git history, or any locally-referenced dataset path (confirmed via
+  scripts/inspect_cubicasa_sample.py, which expects an
+  outputs/selected_svg.txt pointer into a local dataset that is entirely
+  gitignored and absent here).
+
+  This file was hand-built to follow the exact class-naming conventions
+  SvgHouseParser / WallParser / DoorParser / WindowParser actually look
+  for (Space, BoundaryPolygon, Wall, External/Internal, Door, Window,
+  NameLabel), so the REAL, UNMODIFIED parser code can be executed against
+  it and produce genuine output - as opposed to fabricating a fake
+  output dict. It is a two-room plan (a Living Room and a Bedroom
+  separated by an internal wall) with:
+    - one exterior wall carrying a Door (front entrance)
+    - one exterior wall carrying a Window
+    - one interior wall carrying a Door (between the two rooms)
+  to exercise wall/opening/room variety per the requested edge cases.
+
+  REVISION NOTE (SVG Adapter phase): the original version of this fixture
+  gave the south/north exterior walls only enough length to cover the
+  Living Room (x: 0-500), leaving the Bedroom's south/north edges with no
+  wall polygon at all. That meant the wall graph could never form a
+  closed loop, so canonical_builder correctly (not buggily) produced an
+  empty outline/exteriorWalls list for it. Discovered by actually
+  running the full SVG to SvgAdapter to canonical_builder chain, not by
+  inspection. Fixed here by extending wall-south/wall-north to span the
+  full building width (x: 0-1000), covering both rooms. This is a fixture
+  correction only (this file is a hand-built synthetic fixture, not real
+  parser/adapter/builder code); SvgHouseParser, SvgAdapter, and
+  canonical_builder are unmodified.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" viewBox="0 0 1000 700">
+  <g id="Floor-1">
+
+    <!-- ROOM 1: Living Room -->
+    <g class="Space LivingRoom" id="room-living">
+      <polygon class="BoundaryPolygon" points="0,0 500,0 500,400 0,400" />
+    </g>
+
+    <!-- ROOM 2: Bedroom (no semantic CSS class - exercises the
+         NameLabel text-fallback path in _extract_room_name) -->
+    <g class="Space Undefined" id="room-bedroom">
+      <polygon class="BoundaryPolygon" points="500,0 1000,0 1000,400 500,400" />
+      <g class="NameLabel">
+        <text>Bedroom</text>
+      </g>
+    </g>
+
+    <!-- EXTERIOR WALL (south, spans the full building width) with a Door -->
+    <g class="Wall External" id="wall-south">
+      <polygon points="0,390 1000,390 1000,410 0,410" />
+      <g class="Door">
+        <polygon points="200,390 260,390 260,410 200,410" />
+      </g>
+    </g>
+
+    <!-- EXTERIOR WALL (north, spans the full building width) with a Window -->
+    <g class="Wall External" id="wall-north">
+      <polygon points="0,-10 1000,-10 1000,10 0,10" />
+      <g class="Window">
+        <polygon points="150,-10 250,-10 250,10 150,10" />
+      </g>
+    </g>
+
+    <!-- EXTERIOR WALL (west, left side of living room, no openings) -->
+    <g class="Wall External" id="wall-west">
+      <polygon points="-10,0 10,0 10,400 -10,400" />
+    </g>
+
+    <!-- EXTERIOR WALL (east, right side of bedroom, no openings) -->
+    <g class="Wall External" id="wall-east">
+      <polygon points="990,0 1010,0 1010,400 990,400" />
+    </g>
+
+    <!-- INTERIOR WALL between Living Room and Bedroom, with a Door -->
+    <g class="Wall Internal" id="wall-interior">
+      <polygon points="490,0 510,0 510,400 490,400" />
+      <g class="Door">
+        <polygon points="490,150 510,150 510,210 490,210" />
+      </g>
+    </g>
+
+  </g>
+</svg>

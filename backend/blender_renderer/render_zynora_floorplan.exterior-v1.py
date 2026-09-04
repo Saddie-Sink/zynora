@@ -1,3 +1,7 @@
+import random
+import math
+import json
+import argparse
 import sys
 from pathlib import Path
 from typing import Any, Iterable, Sequence
@@ -1210,6 +1214,469 @@ def add_balcony(
             bevel=0.006,
         )
 
+def add_exterior_architecture_v1(
+    floors: Sequence[dict[str, Any]],
+    front_wall_source: dict[str, Any] | None,
+    ground_outline: Sequence[tuple[float, float]],
+    scale: float,
+    materials: dict[str, bpy.types.Material],
+    exterior_plan: dict[str, Any],
+) -> None:
+    """
+    ZYNORA Exterior Architecture V1.
+
+    Adds architectural articulation to the canonical shell without
+    changing the floorplan geometry.
+
+    Current features:
+        - front architectural bay
+        - entrance porch
+        - porch columns
+        - upper facade projection
+        - terrace/parapet articulation
+
+    The canonical FloorPlanJSON remains the source of truth.
+    """
+
+    if not floors or not front_wall_source:
+        return
+
+    front_wall = wall_data(
+        front_wall_source,
+        scale,
+    )
+
+    if not front_wall:
+        return
+
+    front_normal = outward_normal(
+        front_wall,
+        ground_outline,
+    )
+
+    if not front_normal:
+        return
+
+    # ---------------------------------------------------------------
+    # Exterior configuration
+    # ---------------------------------------------------------------
+
+    porch_data = exterior_plan.get("porch") or {}
+    balcony_data = exterior_plan.get("balcony") or {}
+    massing_data = exterior_plan.get("massing") or {}
+
+    masses = massing_data.get("masses") or []
+
+    # ---------------------------------------------------------------
+    # Dimensions
+    # ---------------------------------------------------------------
+
+    wall_length = front_wall["length"]
+
+   # Keep architectural features proportional to the actual facade,
+    # while allowing the exterior engine to define the design intent.
+
+    bay_width = min(
+        max(wall_length * 0.30, 2.4),
+        wall_length * 0.55,
+    )
+
+    bay_depth = min(
+        max(wall_length * 0.045, 0.45),
+        1.20,
+    )
+
+    # Consume the exterior-engine front projection when available.
+    for mass in masses:
+        if not isinstance(mass, dict):
+            continue
+
+        if mass.get("role") != "front_projection":
+            continue
+
+        try:
+            source_width = float(
+                exterior_plan
+                .get("source_plan", {})
+                .get("width", 0.0)
+            )
+
+            engine_width = float(mass.get("width", 0.0))
+            engine_depth = float(mass.get("depth", 0.0))
+
+            if source_width > 0 and engine_width > 0:
+                bay_width = min(
+                    engine_width / source_width * wall_length,
+                    wall_length * 0.55,
+                )
+
+            if engine_depth > 0:
+                bay_depth = min(
+                    engine_depth * scale,
+                    1.20,
+                )
+
+        except (TypeError, ValueError):
+            pass
+
+        break
+
+    porch_width = min(
+         max(wall_length * 0.28, 2.8),
+         wall_length * 0.50,
+      )
+
+    porch_depth = min(
+        max(wall_length * 0.08, 1.4),
+        2.4,
+    )
+
+    # ---------------------------------------------------------------
+    # Front bay centre
+    # ---------------------------------------------------------------
+
+    bay_center = wall_length * 0.50
+
+    # If the exterior engine supplied a front projection, use its
+    # proportional position when possible.
+    for mass in masses:
+        if not isinstance(mass, dict):
+            continue
+
+        if mass.get("role") == "front_projection":
+            try:
+                mass_x = float(mass.get("x", 0.0))
+                mass_width = float(
+                    mass.get(
+                        "width",
+                        bay_width / max(scale, 0.001),
+                    )
+                )
+
+                source_width = max(
+                    float(
+                        exterior_plan
+                        .get("source_plan", {})
+                        .get("width", 0.0)
+                    ),
+                    0.001,
+                )
+
+                bay_center = (
+                    (mass_x + mass_width * 0.5)
+                    / source_width
+                ) * wall_length
+
+            except (
+                TypeError,
+                ValueError,
+                ZeroDivisionError,
+            ):
+                pass
+
+            break
+
+    bay_center = min(
+        max(
+            bay_center,
+            bay_width * 0.5,
+        ),
+        wall_length - bay_width * 0.5,
+    )
+
+    # ---------------------------------------------------------------
+    # 1. FRONT ARCHITECTURAL BAY
+    # ---------------------------------------------------------------
+
+    bay_base = (
+        finite(floors[0].get("elevation"))
+        * scale
+    )
+
+    ground_height = max(
+        finite(
+            floors[0].get(
+                "height",
+                2.8,
+            )
+        )
+        * scale,
+        0.4,
+    )
+
+    # Position slightly outside the real facade.
+    bay_offset = (
+        front_wall["thickness"] * 0.5
+        + bay_depth * 0.5
+        + 0.015
+    )
+
+    add_wall_box(
+        "exterior-v1-front-bay",
+        front_wall,
+        bay_center,
+        ground_height * 0.52,
+        bay_width,
+        bay_depth,
+        ground_height * 0.92,
+        bay_base,
+        materials.get(
+            "wall_secondary",
+            materials["wall"],
+        ),
+        normal_offset=bay_offset,
+        normal=front_normal,
+        bevel=0.025,
+    )
+
+    # ---------------------------------------------------------------
+    # 2. UPPER ARCHITECTURAL FRAME
+    # ---------------------------------------------------------------
+
+    if len(floors) >= 2:
+
+        upper_floor = floors[1]
+
+        upper_base = (
+            finite(
+                upper_floor.get("elevation")
+            )
+            * scale
+        )
+
+        upper_height = max(
+            finite(
+                upper_floor.get(
+                    "height",
+                    2.8,
+                )
+            )
+            * scale,
+            0.4,
+        )
+
+        upper_bay_width = bay_width * 0.88
+
+        upper_bay_depth = bay_depth * 0.72
+
+        upper_offset = (
+            front_wall["thickness"] * 0.5
+            + upper_bay_depth * 0.5
+            + 0.02
+        )
+
+        add_wall_box(
+            "exterior-v1-upper-bay",
+            front_wall,
+            bay_center,
+            upper_height * 0.52,
+            upper_bay_width,
+            upper_bay_depth,
+            upper_height * 0.88,
+            upper_base,
+            materials.get(
+                "wall_secondary",
+                materials["wall"],
+            ),
+            normal_offset=upper_offset,
+            normal=front_normal,
+            bevel=0.025,
+        )
+
+        # -----------------------------------------------------------
+        # Upper horizontal architectural slab
+        # -----------------------------------------------------------
+
+        slab_z = (
+            upper_base
+            - 0.02
+        )
+
+        add_wall_box(
+            "exterior-v1-upper-frame-slab",
+            front_wall,
+            bay_center,
+            0.10,
+            upper_bay_width + 0.30,
+            upper_bay_depth + 0.18,
+            0.20,
+            slab_z,
+            materials.get(
+                "concrete",
+                materials["wall"],
+            ),
+            normal_offset=upper_offset + 0.04,
+            normal=front_normal,
+            bevel=0.018,
+        )
+
+    # ---------------------------------------------------------------
+    # 3. PORCH
+    # ---------------------------------------------------------------
+
+    if porch_data:
+
+        porch_base = (
+            finite(
+                floors[0].get("elevation")
+            )
+            * scale
+        )
+
+        porch_roof_height = min(
+            ground_height * 0.82,
+            3.0 * scale,
+        )
+
+        porch_offset = (
+            front_wall["thickness"] * 0.5
+            + porch_depth * 0.5
+            + 0.06
+        )
+
+        # Porch roof slab
+        add_wall_box(
+            "exterior-v1-porch-roof",
+            front_wall,
+            bay_center,
+            porch_roof_height,
+            porch_width,
+            porch_depth,
+            0.18 * scale,
+            porch_base,
+            materials.get(
+                "roof_cap",
+                materials["roof"],
+            ),
+            normal_offset=porch_offset,
+            normal=front_normal,
+            bevel=0.025,
+        )
+
+        # -----------------------------------------------------------
+        # Porch columns
+        # -----------------------------------------------------------
+
+        column_height = max(
+            porch_roof_height - 0.12 * scale,
+            1.8 * scale,
+        )
+
+        column_width = max(
+            0.18 * scale,
+            0.12,
+        )
+
+        column_depth = max(
+            0.18 * scale,
+            0.12,
+        )
+
+        left_column = (
+            bay_center
+            - porch_width * 0.5
+            + column_width
+        )
+
+        right_column = (
+            bay_center
+            + porch_width * 0.5
+            - column_width
+        )
+
+        for index, center in enumerate(
+            (
+                left_column,
+                right_column,
+            )
+        ):
+
+            add_wall_box(
+                f"exterior-v1-porch-column-{index}",
+                front_wall,
+                center,
+                column_height * 0.5,
+                column_width,
+                column_depth,
+                column_height,
+                porch_base,
+                materials.get(
+                    "wall_secondary",
+                    materials["wall"],
+                ),
+                normal_offset=(
+                    porch_offset
+                    + porch_depth * 0.42
+                ),
+                normal=front_normal,
+                bevel=0.025,
+            )
+
+    # ---------------------------------------------------------------
+    # 4. TERRACE EDGE
+    # ---------------------------------------------------------------
+
+    terrace_data = (
+        exterior_plan.get("terrace")
+        or {}
+    )
+
+    if terrace_data and len(floors) >= 2:
+
+        top_floor = floors[-1]
+
+        roof_elevation = (
+            finite(
+                top_floor.get("elevation")
+            )
+            + finite(
+                top_floor.get(
+                    "height",
+                    2.8,
+                )
+            )
+        ) * scale
+
+        terrace_edge_height = max(
+            finite(
+                terrace_data.get(
+                    "parapet_height",
+                    1.05,
+                )
+            )
+            * scale,
+            0.45,
+        )
+
+        edge_depth = max(
+            0.18 * scale,
+            0.10,
+        )
+
+        edge_offset = (
+            front_wall["thickness"] * 0.5
+            + edge_depth * 0.5
+            + 0.02
+        )
+
+        add_wall_box(
+            "exterior-v1-terrace-front-edge",
+            front_wall,
+            wall_length * 0.50,
+            terrace_edge_height * 0.5,
+            wall_length * 0.92,
+            edge_depth,
+            terrace_edge_height,
+            roof_elevation,
+            materials.get(
+                "roof_cap",
+                materials["roof"],
+            ),
+            normal_offset=edge_offset,
+            normal=front_normal,
+            bevel=0.018,
+        )
+
 
 def add_facade_fins(
     floors: Sequence[dict[str, Any]],
@@ -1803,37 +2270,160 @@ def build_house(
     document: dict[str, Any],
     args: argparse.Namespace,
 ) -> tuple[list[tuple[str, bpy.types.Object]], dict[str, Any]]:
+    """
+    Build the ZYNORA exterior shell from canonical FloorPlanJSON.
+
+    Architecture rule:
+        Canonical floorplan = geometric source of truth.
+
+    The exterior engine only supplies architectural decisions.
+    It does NOT replace rooms, walls, slabs, doors or windows.
+    """
+
+    # ------------------------------------------------------------------
+    # 1. Validate canonical document
+    # ------------------------------------------------------------------
+
     if document.get("schemaVersion") != "zynora.floorplan.v1":
         raise ValueError(
-            "Expected schemaVersion 'zynora.floorplan.v1'. Download FloorPlanJSON from the ZYNORA 3D page."
+            "Expected schemaVersion 'zynora.floorplan.v1'. "
+            "Download FloorPlanJSON from the ZYNORA 3D page."
         )
+
     floors = sorted(
-        [value for value in (document.get("floors") or []) if isinstance(value, dict)],
+        [
+            value
+            for value in (document.get("floors") or [])
+            if isinstance(value, dict)
+        ],
         key=lambda value: finite(value.get("elevation")),
     )
+
     if not floors:
-        raise ValueError("FloorPlanJSON does not contain any floors.")
+        raise ValueError(
+            "FloorPlanJSON does not contain any floors."
+        )
+
+    # ------------------------------------------------------------------
+    # 2. Generate exterior design decisions
+    # ------------------------------------------------------------------
+    #
+    # IMPORTANT:
+    # This does not create another building box.
+    #
+    # It only analyses the canonical floorplan and produces architectural
+    # metadata which can later drive facade/massing features.
+    # ------------------------------------------------------------------
+
+    exterior_project = {
+        "design_spec": {
+            "style_tags": [args.style],
+        }
+    }
+
+    exterior_plan = generate_exterior_from_document(
+        document,
+        exterior_project,
+    )
+
+    # ------------------------------------------------------------------
+    # 3. Existing renderer setup
+    # ------------------------------------------------------------------
 
     scale = unit_scale(document)
-    materials = create_materials(args.style)
-    bounds = bounds_from_floors(floors, scale)
-    entrance_key, front_wall_source = find_main_entrance(floors, scale)
-    ground_outline = clean_outline(floors[0].get("outline") or [], scale)
 
-    add_site(bounds, front_wall_source, ground_outline, scale, materials)
+    materials = create_materials(
+        args.style
+    )
+
+    bounds = bounds_from_floors(
+        floors,
+        scale,
+    )
+
+    entrance_key, front_wall_source = find_main_entrance(
+        floors,
+        scale,
+    )
+
+    ground_outline = clean_outline(
+        floors[0].get("outline") or [],
+        scale,
+    )
+
+    # ------------------------------------------------------------------
+    # 4. Site
+    # ------------------------------------------------------------------
+
+    add_site(
+        bounds,
+        front_wall_source,
+        ground_outline,
+        scale,
+        materials,
+    )
+
+    # ------------------------------------------------------------------
+    # 5. Canonical floor slabs + exterior walls
+    # ------------------------------------------------------------------
+    #
+    # This remains untouched.
+    #
+    # The floorplan is the source of truth.
+    # ------------------------------------------------------------------
 
     for floor_index, floor in enumerate(floors):
-        outline = clean_outline(floor.get("outline") or [], scale)
+
+        outline = clean_outline(
+            floor.get("outline") or [],
+            scale,
+        )
+
         slabs = floor.get("slabs") or []
+
         if slabs:
             slab = slabs[0]
-            slab_outline = clean_outline(slab.get("outline") or floor.get("outline") or [], scale)
-            slab_bottom = finite(slab.get("elevation"), finite(floor.get("elevation")) - 0.16) * scale
-            slab_thickness = max(finite(slab.get("thickness"), 0.18) * scale, 0.06)
+
+            slab_outline = clean_outline(
+                slab.get("outline")
+                or floor.get("outline")
+                or [],
+                scale,
+            )
+
+            slab_bottom = (
+                finite(
+                    slab.get("elevation"),
+                    finite(
+                        floor.get("elevation")
+                    ) - 0.16,
+                )
+                * scale
+            )
+
+            slab_thickness = max(
+                finite(
+                    slab.get("thickness"),
+                    0.18,
+                )
+                * scale,
+                0.06,
+            )
+
         else:
             slab_outline = outline
-            slab_bottom = (finite(floor.get("elevation")) - 0.16) * scale
-            slab_thickness = 0.18 * scale
+
+            slab_bottom = (
+                finite(
+                    floor.get("elevation")
+                )
+                - 0.16
+            ) * scale
+
+            slab_thickness = (
+                0.18 * scale
+            )
+
         add_prism(
             f"floor-{floor_index}-slab",
             slab_outline,
@@ -1842,7 +2432,14 @@ def build_house(
             materials["concrete"],
         )
 
-        for wall_index, wall in enumerate(exterior_walls(floor)):
+        # --------------------------------------------------------------
+        # Exterior walls remain canonical.
+        # --------------------------------------------------------------
+
+        for wall_index, wall in enumerate(
+            exterior_walls(floor)
+        ):
+
             add_wall(
                 wall,
                 floor,
@@ -1854,19 +2451,151 @@ def build_house(
                 entrance_key,
             )
 
-    add_roof_and_parapet(floors[-1], scale, materials)
-    add_facade_band(floors, front_wall_source, scale, materials)
-    add_balcony(floors, front_wall_source, scale, materials)
-    add_facade_fins(floors, front_wall_source, scale, materials)
-    configure_world_and_lighting(bounds, args)
-    cameras = create_cameras(bounds, front_wall_source, ground_outline, scale)
+    # ------------------------------------------------------------------
+    # 6. Existing architectural features
+    # ------------------------------------------------------------------
+
+    add_roof_and_parapet(
+        floors[-1],
+        scale,
+        materials,
+    )
+
+    add_facade_band(
+        floors,
+        front_wall_source,
+        scale,
+        materials,
+    )
+
+    add_balcony(
+        floors,
+        front_wall_source,
+        scale,
+        materials,
+    )
+
+    add_facade_fins(
+        floors,
+        front_wall_source,
+        scale,
+        materials,
+    )
+
+    add_exterior_architecture_v1(
+        floors,
+        front_wall_source,
+        ground_outline,
+        scale,
+        materials,
+        exterior_plan,
+    )
+
+    # ------------------------------------------------------------------
+    # 7. Exterior-engine diagnostic information
+    # ------------------------------------------------------------------
+    #
+    # We intentionally do not create new geometry from the experimental
+    # massing data yet.
+    #
+    # This lets us verify that the architectural reasoning is correctly
+    # connected before introducing projections into the shell.
+    # ------------------------------------------------------------------
+
+    massing = exterior_plan.get(
+        "massing",
+        {},
+    )
+
+    mass_list = massing.get(
+        "masses",
+        [],
+    )
+
+    exterior_summary = {
+        "schema": exterior_plan.get(
+            "schema",
+            "zynora.exterior.massing.v1",
+        ),
+        "version": exterior_plan.get(
+            "version",
+            "1.0",
+        ),
+        "strategy": massing.get(
+            "strategy",
+            "canonical",
+        ),
+        "massCount": len(
+            mass_list
+        ),
+        "hasPorch": bool(
+            exterior_plan.get(
+                "porch"
+            )
+        ),
+        "hasBalcony": bool(
+            exterior_plan.get(
+                "balcony"
+            )
+        ),
+        "hasTerrace": bool(
+            exterior_plan.get(
+                "terrace"
+            )
+        ),
+        "roofType": (
+            exterior_plan
+            .get("roof", {})
+            .get("type")
+        ),
+    }
+
+    # ------------------------------------------------------------------
+    # 8. Lighting
+    # ------------------------------------------------------------------
+
+    configure_world_and_lighting(
+        bounds,
+        args,
+    )
+
+    # ------------------------------------------------------------------
+    # 9. Cameras
+    # ------------------------------------------------------------------
+
+    cameras = create_cameras(
+        bounds,
+        front_wall_source,
+        ground_outline,
+        scale,
+    )
+
+    # ------------------------------------------------------------------
+    # 10. Final summary
+    # ------------------------------------------------------------------
+
     return cameras, {
-        "schemaVersion": document.get("schemaVersion"),
+        "schemaVersion": document.get(
+            "schemaVersion"
+        ),
         "rendererVersion": RENDERER_VERSION,
-        "floorCount": len(floors),
-        "wallCount": sum(len(exterior_walls(floor)) for floor in floors),
+
+        "floorCount": len(
+            floors
+        ),
+
+        "wallCount": sum(
+            len(
+                exterior_walls(floor)
+            )
+            for floor in floors
+        ),
+
         "bounds": bounds,
+
         "style": args.style,
+
+        "exteriorEngine": exterior_summary,
     }
 
 
